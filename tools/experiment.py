@@ -17,15 +17,21 @@ class Spatial_CxG_Experiment():
         '''
         Args:
             dataset_id (str): cellxgene dataset_id of the experiment
-            h5ad_folder (str): Folder path for storing the downloaded h5ad file
+            h5ad_folder (str): folder path for storing the downloaded h5ad file
         '''
         super().__init__
         self.dataset_id = dataset_id
+        '''self.dataset_id (str): cellxgene dataset_id of the experiment'''
         self.dataset_url = self.get_dataset_url()
+        '''self.dataset_url (str): download link for the h5ad file of the experiment'''
         self.h5ad_folder = h5ad_folder
+        '''self.h5ad_folder (str): folder path for storing the downloaded h5ad file'''
         self.h5ad_disk_path = os.path.join(self.h5ad_folder, f'{self.dataset_id}.h5ad')
+        '''self.h5ad_disk_path (str): file path of the downloaded h5ad file'''
         self.adata = self.get_adata()
+        '''self.adata (anndata._core.anndata.AnnData). AnnData object read into memory from the h5ad file'''
         self.obs_columns = list(self.adata.obs.columns)
+        '''self.obs.columns (list[str]): list containing every column name in self.adata.obs.columns as a string'''
 
     def get_dataset_url(self):
         '''
@@ -89,6 +95,7 @@ class Experiment_Collection():
     Class representing a collection of spatial transcriptomics experiments,
     as defined by the class Spatial_CxG_Experiment()
     '''
+    obs_intersection: int
 
     def __init__(
             self,
@@ -97,16 +104,22 @@ class Experiment_Collection():
     ):
         '''
         Args:
-            datasets_ids_csv (str): Filepath to a csv, containing all the dataset ids in a column 'dataset_id'
+            dataset_ids_csv (str): Filepath to a csv, containing all the dataset ids in a column 'dataset_id'
             h5ad_folder (str): Folder path for storing the downloaded h5ad files
         '''
         super().__init__()
         self.dataset_ids = pd.read_csv(dataset_ids_csv)['dataset_id'].tolist()
+        '''self.dataset_ids (list[str]): list containing cellxgene dataset ids '''
         self.h5ad_folder = h5ad_folder
+        '''self.h5ad_folder (str): Folder path for the downloaded h5ad files'''
         self.experiments = self.get_datasets()
+        '''self.experiments (list[experiment.Spatial_CxG_Experiment]): list containing the spatial experiment objects'''
         self.all_obs_columns = self.get_all_obs_columns()
-        self.obs_intersection = self.get_obs_intersection()
+        '''self.all_obs_columns (list[str]): list containing the columns of every Spatial_CxG_Experiment.obs_columns in self.experiments'''
+        self.obs_intersection = self.get_obs_intersection() 
+        '''self.obs_intersection (list[str]): list containing the intersection of every Spatial_CxG_Experiment.obs_columns in self.experiments'''
         self.obs_difference = self.get_obs_difference()
+        '''self.obs_difference (list[str]): list containing the difference across every Spatial_CxG_Experiment.obs_columns in self.experiments'''
     
     def get_datasets(self):
         '''
