@@ -17,5 +17,5 @@ pip install -U cellxgene-census
 ```
 Notebooks:
 - 0-240423-Downloading_Data/0-240423-Cellxgene_api_querying.ipynb
-- 0-240423-Downloading_Data/1-240423-concat_anndata.ipynb
 - 0-240423-Downloading_Data/0-240423-Manual_Dataset_Download.ipynb
+- 1-240423-Downloading_Data/1-240423-Process_Metadata.ipynb
