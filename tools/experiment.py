@@ -2,6 +2,7 @@ import requests
 import os
 import scanpy as sc
 import pandas as pd
+from tqdm import tqdm
 
 class Spatial_CxG_Experiment():
     '''
@@ -66,6 +67,7 @@ class Spatial_CxG_Experiment():
             AnnData object(anndata._core.anndata.AnnData)
         '''
         if not os.path.isfile(self.h5ad_disk_path):
+            print(f'downloading AnnData object with dataset_id: {self.dataset_id}')
             self.download_experiment()
         else:
             pass
@@ -85,9 +87,13 @@ class Spatial_CxG_Experiment():
         for column in self.adata.obs.columns:
             for key, value in obs_dict.items():
                 if column in value:
-                    obs_dict_rev[value] = key
+                    obs_dict_rev[column] = key
         return obs_dict_rev
 
+    def standardize_obs_column_names(self, obs_dict: dict[str, list[str]]):
+        obs_dict_rev = self.get_experiment_obs_dict_rev(obs_dict)
+        print(obs_dict, obs_dict_rev)
+        self.adata.obs.rename(columns=obs_dict_rev, inplace=True)
 
 
 class Experiment_Collection():
@@ -128,7 +134,7 @@ class Experiment_Collection():
             list: Contains Spatial_CxG_Experiment() for every dataset_id in dataset_ids
         '''
         experiments = []
-        for dataset_id in self.dataset_ids:
+        for dataset_id in tqdm(self.dataset_ids):
             spatial_experiment = Spatial_CxG_Experiment(
                 dataset_id=dataset_id,
                 h5ad_folder=self.h5ad_folder,
@@ -142,14 +148,14 @@ class Experiment_Collection():
             pandas.core.indexes.base.Index: adata.obs.columns for every experiment
         '''
         for experiment in self.experiments:
-            print(experiment.obs_columns)
+            print(experiment.adata.obs.columns)
 
     def get_all_obs_columns(self):
         '''
         Returns:
             list: Contains the column names (str) of every experiments adata.obs dataframe 
         '''
-        nested_list = [experiment.obs_columns for experiment in self.experiments]
+        nested_list = [experiment.adata.obs.columns for experiment in self.experiments]
         return sorted(list(set([item for sublist in nested_list for item in sublist])))
 
     def get_obs_intersection(self):
@@ -161,10 +167,10 @@ class Experiment_Collection():
         '''
         nested_list = []
         for experiment in self.experiments:
-            nested_list.append(experiment.obs_columns)
+            nested_list.append(experiment.adata.obs.columns)
 
         intersection = []
-        for i in self.all_obs_columns:
+        for i in self.get_all_obs_columns():
             if all(i in sublist for sublist in nested_list):
                 intersection.append(i)
         return sorted(intersection)
@@ -176,9 +182,9 @@ class Experiment_Collection():
         Returns:
             list: Difference of the set Spatial_CxG_Experiment().obs_columns of all experiments
         '''
-        return sorted(list(set(self.all_obs_columns) - set(self.obs_intersection)))
+        return sorted(list(set(self.get_all_obs_columns()) - set(self.get_obs_intersection())))
 
-    def rename_obs(self, obs_dict: dict[str, list[str]]):
+    def standardize_experiments_obs_columns_names(self, obs_dict: dict[str, list[str]]):
         '''
         Not yet implemented!!!
 
@@ -189,8 +195,7 @@ class Experiment_Collection():
             obs_dict (dict): Dictionary of the shape {'new_column_1': [old_column_1, old column_2, ..., old column_n]},
         '''
         for experiment in self.experiments:
-            obs_dict_rev = experiment.get_experiment_obs_dict_rev(obs_dict)
-            print(obs_dict_rev)
+            experiment.standardize_obs_column_names(obs_dict)
 
     def get_obs_unique_values(self, obs_column: str):
         '''
@@ -204,10 +209,44 @@ class Experiment_Collection():
         '''
         all_values = []
         for experiment in self.experiments:
-            if obs_column in experiment.obs_columns:
+            if obs_column in experiment.adata.obs.columns:
                 values = list(experiment.adata.obs[obs_column].unique())
                 for value in values:
                     all_values.append(value)
             else:
                 print(f'Experiment with id {experiment.dataset_id} does not contain obs column {obs_column}')
         return list(set(all_values))
+
+    def return_adata_from_id(self, dataset_id):
+        '''
+        Returns the adata object with the respective experiments dataset id contained in self.experiments
+
+        Args:
+            dataset_id (str): dataset id as a string
+
+        Returns: AnnData object(anndata._core.anndata.AnnData)
+
+        '''
+        for experiment in self.experiments:
+            if experiment.dataset_id == dataset_id:
+                return experiment.adata
+            else:
+                print(f'Dataset with id {dataset_id} not found in collection')
+    
+    def standardize_experiments_obs_columns_values(self, obs_values_dict: dict[str, dict[str, list[str]]]):
+        '''
+        Remaps columns values specified according to a dictionary
+        
+        Args:
+            obs_values_dict (dict[str, dict[str, list[str]]]): Dictionary of columns containing a remapping dictionary according to which
+            values get standardized
+        '''
+        for experiment in self.experiments:
+            for column, mapping_dict in obs_values_dict.items():
+                def map_values(value):
+                    for key, values_list in mapping_dict.items():
+                        if value in values_list:
+                            return key
+                    return value
+                experiment.adata.obs[column + '_standard'] = experiment.adata.obs[column].apply(map_values)
+
