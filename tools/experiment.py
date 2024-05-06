@@ -116,6 +116,8 @@ class Experiment_Collection():
         super().__init__()
         self.dataset_ids = pd.read_csv(dataset_ids_csv)['dataset_id'].tolist()
         '''self.dataset_ids (list[str]): list containing cellxgene dataset ids '''
+        self.dataset_df = pd.read_csv(dataset_ids_csv, index_col='dataset_id')
+        '''self.dataset_df (pandas.core.frame.DataFrame): Pandas Dataframe containing the datasets metadata'''
         self.h5ad_folder = h5ad_folder
         '''self.h5ad_folder (str): Folder path for the downloaded h5ad files'''
         self.experiments = self.get_datasets()
